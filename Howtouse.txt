@@ -1,0 +1,264 @@
+Segue um guia técnico, completo e profissional — pensado tanto para programadores experientes quanto para máquinas — explicando passo a passo como adicionar/alterar botões e outros componentes ao sistema de UI do seu MOONDF HUB. Ele explica a arquitetura, convenções, responsabilidades, exemplos de código prontos para copiar/colar e boas práticas (gestão de estado, temas, traduções, performance e limpeza).
+
+Sumário rápido
+- Visão geral da arquitetura
+- Convenções e objetos centrais
+- Como adicionar um novo tópico (lado esquerdo)
+- Como adicionar/alterar um item (entry) no menu principal
+- Padrão para criar um novo Type (ex.: ColorPicker e ConfirmButton)
+- Estado persistente, chaves e API pública dos entries
+- Tema e tradução: como estender
+- Boas práticas, performance e limpeza de conexões
+- Checklist para mudanças futuras
+- Exemplos práticos (cópia/colar)
+
+1) Visão geral da arquitetura
+- A UI é construída via createEntry(params, parentFrame, depth, onChildrenChanged).
+- Tipos de item (params.Type) são tratados dentro de createEntry com blocos if/elseif.
+- Cada entry tem:
+  - wrapper (Frame principal)
+  - bg (ElementBackground) com BackgroundTransparency controlado por CurrentOpacity
+  - accent (barra lateral que usa cor baseada em params.Color ou TYPE_COLORS)
+  - nameLabel + descLabel
+  - rightArea (onde ficam controles interativos)
+  - childrenContainer e childrenHolder para listas aninhadas
+- Estados globais:
+  - globalEnv._HubStates: para toggles/booleanos persistentes
+  - globalEnv._HubSelections: para seleções de texto/persistentes
+  - globalEnv._ScriptHubStates: para sliders/valores numéricos
+- Conexões (event listeners) são armazenadas no array connections e desconectadas ao fechar a GUI.
+- Funções utilitárias úteis: new, tween, makeRound, makeStroke, clamp, createHamburger, makeHoverAnimate, refreshMainScroll.
+
+2) Convenções e nomes
+- params.Name: string mostrada ao usuário (deve vir de T("KEY") para suportar idioma).
+- params.Description: texto descritivo (usar T()).
+- params.Type: um dos tipos existentes: Label, Single, Toggle, Slider, InputImmediate, InputSelect, ListAuto, ListPersistent, Container, Intensity.
+- params.StateKey: string usada para persistência em _HubStates / _ScriptHubStates (padrão recomendado: <Categoria>_<Identificador>, ex.: "Aimbot_Enabled" ou "Config_Opacity")
+- params.Callback / OnChange / OnEnable / OnDisable: funções que serão chamadas — sempre cercar chamadas externas com pcall para segurança.
+
+3) Como adicionar um novo tópico (lado esquerdo)
+- Local: função initTopics() onde addTopic é chamada.
+- Exemplo (adicionar tópico novo):
+```lua
+addTopic(T("TOPIC_NEWFEATURE"), {
+    { Type = "Label", Name = T("NEW_LABEL"), Description = T("NEW_DESC") },
+    { Type = "Single", Name = T("NEW_ACTION"), Description = T("NEW_ACTION_DESC"), Callback = function() print("Ação executada") end },
+})
+```
+- Observações:
+  - Use T("CHAVE") para strings; registre tradução em TRANSLATIONS.
+  - Para opções de ListPersistent use Options = {"Opção A", "Opção B"}.
+
+4) Como adicionar/alterar um item (entry) — padrão e fluxo
+- Local de edição: função createEntry.
+- Fluxo para o usuário:
+  1. createEntry cria a UI básica (wrapper, bg, accent, labels, rightArea, children).
+  2. Com base em params.Type são criados controles na rightArea.
+  3. Eventos são conectados (MouseButton1Click, FocusLost, InputBegan) e adicionados em connections.
+  4. Quando relevante, o entry retorna métodos (ex.: entryObj.Get e entryObj.Set para Slider).
+- Para alterar comportamento visual: use THEME.* e funções tween; atualize refreshStaticUI se elementos globais novos exigirem mudanças de cor.
+
+5) Criar um novo Type: padrão e checklist
+- Onde: adicionar um novo ramo elseif params.Type == "NomeDoNovoTipo" then ... dentro de createEntry.
+- Checklist mínimo:
+  - Criar os elementos visuais dentro de rightArea (não modifique layout externo).
+  - Usar makeRound, makeStroke quando necessário para consistência.
+  - Definir cores usando THEME ou TYPE_COLORS[params.Type].
+  - Persistir estado se necessário em globalEnv._HubStates / _ScriptHubStates ou _HubSelections.
+  - Adicionar eventos com table.insert(connections, conn).
+  - Garantir pcall em chamadas de callback.
+  - Se expor API (Get/Set), anexar a entryObj métodos.
+  - Se elementos precisarem de atualização ao trocar tema, adaptar refreshStaticUI.
+  - Manter a animação/UX consistente com tween(...) e CurrentOpacity.
+  - Suportar depth para recuos para manter padrão visual de aninhamento.
+  - Se houver children (lista expansível), suportar buildChildren / collapse / expandTo existentes.
+
+6) Exemplo 1 — Adicionar ConfirmButton (botão com confirmação modal)
+- Objetivo: criar um botão que pede confirmação antes de executar callback.
+
+Código sugerido (inserir dentro de createEntry):
+```lua
+elseif params.Type == "ConfirmButton" then
+    -- Parâmetros esperados:
+    -- params.ConfirmText (opcional): texto de confirmação
+    -- params.Callback: função a executar após confirmação
+
+    local btn = new("TextButton", {
+        Parent = rightArea,
+        Size = UDim2.new(0, 120, 0, 28),
+        Position = UDim2.new(1, -130, 0.5, -14),
+        BackgroundColor3 = THEME.Accent,
+        Text = params.Name or "Confirm",
+        TextColor3 = Color3.new(1,1,1),
+        Font = Enum.Font.GothamBold,
+        TextSize = 14
+    })
+    makeRound(btn, 6)
+
+    table.insert(connections, btn.MouseButton1Click:Connect(function()
+        if not hubVisible then return end
+        -- Modal simples: reusar mini modal no root (pode melhorar para modal global)
+        local confirmBg = new("Frame", {Parent = root, Size = UDim2.new(0, 340, 0, 120), Position = UDim2.new(0.5, -170, 0.5, -60), BackgroundColor3 = THEME.PanelBg, ZIndex = 50})
+        makeRound(confirmBg, 8)
+        local txt = new("TextLabel", {Parent = confirmBg, Text = (params.ConfirmText or "Confirmar operação?"), Size = UDim2.new(1, -20, 0, 48), Position = UDim2.new(0, 10, 0, 12), BackgroundTransparency = 1, TextColor3 = THEME.Text, Font = Enum.Font.Gotham, TextSize = 14, TextWrapped = true})
+        local btnYes = new("TextButton", {Parent = confirmBg, Text = "Yes", Size = UDim2.new(0, 120, 0, 32), Position = UDim2.new(0.5, -130, 1, -44), BackgroundColor3 = Color3.fromRGB(0,160,0), TextColor3 = Color3.new(1,1,1), Font = Enum.Font.GothamBold, TextSize = 14})
+        local btnNo = new("TextButton", {Parent = confirmBg, Text = "No", Size = UDim2.new(0, 120, 0, 32), Position = UDim2.new(0.5, 10, 1, -44), BackgroundColor3 = Color3.fromRGB(150,150,150), TextColor3 = Color3.new(1,1,1), Font = Enum.Font.GothamBold, TextSize = 14})
+        makeRound(btnYes, 6); makeRound(btnNo, 6)
+
+        local function cleanup()
+            pcall(function() confirmBg:Destroy() end)
+        end
+        table.insert(connections, btnYes.MouseButton1Click:Connect(function()
+            pcall(function() if params.Callback then params.Callback() end end)
+            cleanup()
+        end))
+        table.insert(connections, btnNo.MouseButton1Click:Connect(cleanup))
+    end))
+```
+Observações:
+- Modal simples é criado na hora; você pode refatorar para um gerenciador de modais global.
+- Use pcall para evitar crashs se callback falhar.
+- Adicionar ZIndex alto para modal sobrepor.
+
+7) Exemplo 2 — Adicionar ColorPicker (retorna Color3 e armazena em _ScriptHubStates)
+- Use quando quer selecionar cor e mostrar preview.
+
+Código sugerido (inserir dentro de createEntry):
+```lua
+elseif params.Type == "ColorPicker" then
+    -- params.StateKey (recomendado) e params.Default (Color3)
+    local key = params.StateKey or ("Color_" .. tostring(math.random(100000,999999)))
+    local cur = globalEnv._ScriptHubStates[key] or params.Default or Color3.fromRGB(255,255,255)
+    local preview = new("Frame", {Parent = rightArea, Size = UDim2.new(0, 34, 0, 24), Position = UDim2.new(1, -40, 0.5, -12), BackgroundColor3 = cur, BorderSizePixel = 1})
+    makeRound(preview, 6)
+    local pickBtn = new("TextButton", {Parent = rightArea, Size = UDim2.new(0, 80, 0, 28), Position = UDim2.new(1, -130, 0.5, -14), BackgroundColor3 = THEME.Accent, Text = "Pick", TextColor3 = Color3.new(1,1,1)})
+    makeRound(pickBtn, 6)
+
+    local function setColor(c)
+        cur = c
+        preview.BackgroundColor3 = cur
+        globalEnv._ScriptHubStates[key] = cur
+        if params.OnChange then pcall(function() params.OnChange(cur) end) end
+    end
+
+    table.insert(connections, pickBtn.MouseButton1Click:Connect(function()
+        -- Implementação simples: ciclo de cores (ex. para demo). Em produção, abrir um modal com sliders (R,G,B) ou color wheel.
+        local nxt = Color3.fromRGB(math.random(0,255), math.random(0,255), math.random(0,255))
+        setColor(nxt)
+    end))
+
+    entryObj.Get = function() return cur end
+    entryObj.Set = function(c) if typeof(c) == "Color3" then setColor(c) end end
+```
+Observações:
+- Implementação de color picker real com color wheel exige mais UI e input handling, mas este modelo mostra como expor API e persistir estado.
+
+8) Estado persistente e padrões
+- Toggles: salvar em globalEnv._HubStates[params.StateKey] = true/false.
+- Sliders: salvar em globalEnv._ScriptHubStates[key] = num.
+- Inputs: InputSelect salva em _HubSelections[params.StateKey] quando focusLost; InputImmediate chama Callback.
+- Use chaves curtas e descritivas: "Settings_Opacity", "Test_FeatureX".
+- Para leitura em outros scripts, acessar getgenv() ou globalEnv._... diretamente.
+
+9) Traduções e temas
+- Traduções: adicionar chave em TRANSLATIONS table (PT e EN). Ex.: TRANSLATIONS.PT.MY_KEY = "Texto"
+- Usar T("MY_KEY") quando setar labels, tooltips, titles.
+- Temas: adicionar cor em THEME_PRESETS com mesmo formato (Background, PanelBg, Text, SubText, Off, On, Border, Hover, Danger, Accent, KnobColor).
+- Quando trocar tema via callback, o código atualiza CurrentThemeName e copia valores para THEME e chama initTopics() para re-renderizar.
+
+10) Boas práticas e segurança
+- Use pcall em callbacks externos: pcall(params.Callback) ou pcall(function() params.Callback(args) end).
+- Desconectar conexões em closeBtn.MouseButton1Click (o script já faz isso).
+- Evitar bloqueios: não use loops pesados no main thread; use task.defer/task.spawn.
+- Nunca crie objetos no CoreGui sem nome único e sem destruir; verificação no início do script já remove antigas GUIs com o mesmo nome.
+- Para ações sensíveis (ex.: execução de código), prefira modais de confirmação.
+- Evite usar getgenv() sem checar disponibilidade; o script já trata com fallback para _G.
+
+11) Limpeza de conexões e memória
+- Sempre adicionar todas as conexões ao table connections com table.insert(connections, conn).
+- Ao destruir UI, iterar connections e conn:Disconnect() com pcall.
+- Se criar objetos temporários (modals), adicione os eventos deles também ao connections ou garanta destruição manual.
+
+12) Hooks úteis e pontos de extensão
+- refreshMainScroll(): chamar quando modificar conteúdo em scroll.
+- updateLayout(): reaplicar tamanhos quando root.Resize.
+- refreshStaticUI(): atualizar cores e textos estáticos (chamar ao trocar tema).
+- createHamburger / makeHoverAnimate: reutilizáveis para padrão visual.
+
+13) Padrão visual / espaçamentos
+- baseH = 60 por entry
+- depth indentation: offset de 12px por nível (use depth no position)
+- RIGHT_AREA_SCALE mantém consistência do lado direito
+- Rounded corners: makeRound(inst, radius)
+- Sempre usar THEME.* para cores
+
+14) Checklist antes de abrir PR / commit
+- [ ] Adicionar chaves de tradução (PT/EN)
+- [ ] Adicionar entrada em initTopics (se for uma opção padrão)
+- [ ] Usar THEME/TYPE_COLORS; não hardcodear cores exceto temporariamente
+- [ ] Persistir estado com StateKey quando necessário
+- [ ] Adicionar conexões ao connections para limpeza
+- [ ] Testar troca de tema e mudança de idioma
+- [ ] Testar redimensionamento e comportamento de canvas (refreshMainScroll)
+- [ ] Incluir pcall em callbacks
+- [ ] Revisar nomes das chaves para consistência (CamelCase ou underscore)
+
+15) Exemplos práticos finais
+- Exemplo: adicionar Toggle persistente
+```lua
+-- Dentro de addTopic(...) options list:
+{ Type = "Toggle", Name = T("SOME_TOGGLE"), Description = T("SOME_TOGGLE_DESC"), StateKey = "MyFeature_Enabled",
+  OnEnable = function() print("enabled") end,
+  OnDisable = function() print("disabled") end
+}
+```
+- Exemplo: Slider com step flutuante e callback
+```lua
+{ Type = "Slider", Name = "Precision", Description = "Set precision", Min = 0, Max = 1, Default = 0.5, Step = 0.01,
+  StateKey = "Precision_Value",
+  OnChange = function(v) print("new precision", v) end
+}
+-- OBS: O slider atual arredonda para inteiro. Para suportar float você precisa:
+--   * Remover math.floor(...) em xToValue / cur e aceitar valores decimais.
+--   * Ajustar clamp e round conforme step (usar math.floor(raw/step + 0.5) * step sem math.floor final).
+--   * Atualizar valLabel.Text com tonumber formatação: string.format("%.2f", cur)
+```
+
+16) Alteração prática para suportar Slider com Step decimal (snippet)
+- Substitua a seção que calcula raw e cur no bloco Slider por:
+```lua
+local function xToValue(absX)
+    local tx = track.AbsolutePosition.X
+    local tw = track.AbsoluteSize.X
+    if tw <= 0 then return cur end
+    local rel = (absX - tx) / math.max(1, tw)
+    rel = clamp(rel, 0, 1)
+    local raw = minV + (rel * (maxV - minV))
+    if step and step > 0 then
+        raw = math.floor((raw / step) + 0.5) * step
+    end
+    -- sem math.floor final para permitir floats
+    return clamp(raw, minV, maxV)
+end
+
+entryObj.Set = function(v)
+    local num = tonumber(v)
+    if num then
+        cur = clamp(num, minV, maxV)
+        updateVisuals(false)
+        fireChange()
+    end
+end
+
+local function updateVisuals(instant)
+    -- use tostring formatting para floats
+    valLabel.Text = (step and step < 1) and string.format("%.2f", cur) or tostring(cur)
+    -- resto do código
+end
+```
+
+17) Considerações finais e próximos passos
+- Estruture mudanças seguindo o padrão de Types existentes para manter coesão visual.
+- Sempre atualize translations e tema presets quando adicionar novas labels ou elementos.
+- Considere refatorar createEntry em módulos menores se o número de tipos crescer muito (cada Type em seu arquivo/factory).
+- Documente novos Types na mesma forma que este guia: parâmetros aceitos, efeitos colaterais, keys de estado.
