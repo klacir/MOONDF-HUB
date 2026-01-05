@@ -1,6 +1,6 @@
 --[[
     ================================================================================
-    MOONDF HUB - VERSÃO LIMPA (SEM ABA TESTE)
+    MOONDF HUB - VERSÃO VIRGEM (SOMENTE CONFIGURAÇÃO)
     ================================================================================
 ]]
 
@@ -16,12 +16,13 @@ local CoreGui = game:GetService("CoreGui")
 -- =========================
 -- SISTEMA DE IDIOMA
 -- =========================
-local CurrentLang = "PT" -- Padrão: Português
+local globalEnv = (typeof(getgenv) == "function" and getgenv()) or _G
+globalEnv.CurrentLang = globalEnv.CurrentLang or "PT"
+local CurrentLang = globalEnv.CurrentLang -- Padrão: Português
 
 local TRANSLATIONS = {
     PT = {
         TITLE_MAIN = "MOONDF HUB",
-        TOPIC_TEST = "Teste",
         TOPIC_CONFIG = "Configuração",
         FOOTER_TEXT = "Right Ctrl ou use o botão para minimizar • Inputs: Immediate (OK) / Select (no OK)",
      
@@ -32,44 +33,9 @@ local TRANSLATIONS = {
         THEME_DESC = "Altera as cores da interface",
         OPACITY_LABEL = "Opacidade / Opacity",
         OPACITY_DESC = "Altera a transparência da janela",
-        
-        -- Test Itens (Mantidos no dicionário para não quebrar referências, mas não usados)
-        DEMO_LABEL = "Demonstração",
-        DEMO_DESC = "Verifique os comentários no código.",
-        BTN_HITBOX = "Botão Teste",
-        BTN_HITBOX_DESC = "Clique para testar",
-        TOGGLE_HITBOX = "Toggle Teste",
-        TOGGLE_HITBOX_DESC = "Ativar/Desativar",
-        SLIDER_BLUE = "Slider",
-        SLIDER_BLUE_DESC = "Arraste para mudar o valor",
-        INPUT_OK = "Input com OK",
-        INPUT_OK_DESC = "Digitar e confirmar",
-        INPUT_OK_PLACE = "Escreva aqui...",
-        INPUT_NO_OK = "Input Texto (Sem OK)",
-        INPUT_NO_OK_DESC = "Salva ao sair",
-        INPUT_NO_OK_PLACE = "Texto...",
-        DROPDOWN = "Lista Opções",
-        DROPDOWN_DESC = "Selecione uma opção",
-        LIST_GROUP = "Grupo de Itens",
-        LIST_GROUP_DESC = "Contém outros itens",
-        ITEM_INNER_1 = "Item Interno 1",
-        ITEM_INNER_DESC_1 = "Toggle dentro da lista",
-        ITEM_INNER_2 = "Item Interno 2",
-        ITEM_INNER_DESC_2 = "Slider dentro da lista",
-        NEST_TEST = "Teste Aninhado",
-        NEST_TEST_DESC = "Níveis profundos",
-        LEVEL_1 = "Nível 1",
-        LEVEL_1_DESC = "Dentro da primeira lista",
-        SUB_LIST = "Sub-Lista",
-        SUB_LIST_DESC = "Nível 2",
-        BTN_LEVEL_3 = "Botão Nível 3",
-        BTN_LEVEL_3_DESC = "Funcionando",
-        TOGGLE_LEVEL_3 = "Toggle Nível 3",
-        TOGGLE_LEVEL_3_DESC = "Funcionando"
     },
     EN = {
         TITLE_MAIN = "MOONDF HUB",
-        TOPIC_TEST = "Test",
         TOPIC_CONFIG = "Settings",
         FOOTER_TEXT = "Right Ctrl or use button to minimize • Inputs: Immediate (OK) / Select (no OK)",
         
@@ -79,39 +45,6 @@ local TRANSLATIONS = {
         THEME_DESC = "Changes UI colors",
         OPACITY_LABEL = "Opacity / Opacidade",
         OPACITY_DESC = "Changes window transparency",
-        
-        DEMO_LABEL = "Demo",
-        DEMO_DESC = "Check code comments.",
-        BTN_HITBOX = "Test Button",
-        BTN_HITBOX_DESC = "Click to test",
-        TOGGLE_HITBOX = "Test Toggle",
-        TOGGLE_HITBOX_DESC = "Enable/Disable",
-        SLIDER_BLUE = "Slider",
-        SLIDER_BLUE_DESC = "Drag to change value",
-        INPUT_OK = "Input with OK",
-        INPUT_OK_DESC = "Type and confirm",
-        INPUT_OK_PLACE = "Write here...",
-        INPUT_NO_OK = "Text Input (No OK)",
-        INPUT_NO_OK_DESC = "Saves on exit",
-        INPUT_NO_OK_PLACE = "Text...",
-        DROPDOWN = "Option List",
-        DROPDOWN_DESC = "Select an option",
-        LIST_GROUP = "Group List",
-        LIST_GROUP_DESC = "Contains other items",
-        ITEM_INNER_1 = "Inner Item 1",
-        ITEM_INNER_DESC_1 = "Toggle inside list",
-        ITEM_INNER_2 = "Inner Item 2",
-        ITEM_INNER_DESC_2 = "Slider inside list",
-        NEST_TEST = "Nesting Test",
-        NEST_TEST_DESC = "Deep levels",
-        LEVEL_1 = "Level 1",
-        LEVEL_1_DESC = "Inside first list",
-        SUB_LIST = "Sub-List",
-        SUB_LIST_DESC = "Level 2",
-        BTN_LEVEL_3 = "Button Level 3",
-        BTN_LEVEL_3_DESC = "Working",
-        TOGGLE_LEVEL_3 = "Toggle Level 3",
-        TOGGLE_LEVEL_3_DESC = "Working"
     }
 }
 
@@ -122,6 +55,10 @@ end
 -- =========================
 -- CONFIGURAÇÃO VISUAL & TEMAS
 -- =========================
+globalEnv.CurrentThemeName = globalEnv.CurrentThemeName or "Preto / Black"
+local CurrentThemeName = globalEnv.CurrentThemeName
+globalEnv.CurrentOpacity = globalEnv.CurrentOpacity or 0
+local CurrentOpacity = globalEnv.CurrentOpacity
 local DEFAULT_WIDTH = 760
 local DEFAULT_HEIGHT = 520
 local MIN_WIDTH = 420
@@ -179,12 +116,10 @@ local THEME_PRESETS = {
         Border     = Color3.fromRGB(70, 70, 70),
         Hover      = Color3.fromRGB(35, 35, 35),
         Danger     = Color3.fromRGB(150, 50, 50),
-        -- MODIFICAÇÃO: Accent virou Cinza para o botão OK e Barra Vertical
         Accent     = Color3.fromRGB(80, 80, 80), 
         KnobColor  = Color3.fromRGB(245, 245, 245)
     },
     ["Branco / White"] = {
-        -- MODIFICAÇÃO: Inversão de cores (Fundo Branco, Botões Cinza Claro)
         Background = Color3.fromRGB(255, 255, 255), -- Era PanelBg
         PanelBg    = Color3.fromRGB(235, 235, 240), -- Era Background
         Text       = Color3.fromRGB(30, 30, 35),
@@ -195,7 +130,6 @@ local THEME_PRESETS = {
         Hover      = Color3.fromRGB(245, 245, 250),
         Danger     = Color3.fromRGB(255, 80, 80),
         Accent     = Color3.fromRGB(255, 255, 255), -- Barra escura para contraste
-        -- MODIFICAÇÃO: Bolinha do Slider Preta
         KnobColor  = Color3.fromRGB(0, 0, 0)
     },
     ["Cinza / Gray"] = {
@@ -214,8 +148,6 @@ local THEME_PRESETS = {
 }
 
 -- Tema Inicial e Variáveis Globais
-local CurrentThemeName = "Preto / Black"
-local CurrentOpacity = 0 -- 0 = Visível, 1 = Invisível
 local THEME = {} 
 -- Copia o tema inicial
 for k,v in pairs(THEME_PRESETS[CurrentThemeName]) do THEME[k] = v end
@@ -236,7 +168,6 @@ local TYPE_COLORS = {
 -- =========================
 -- VARIÁVEIS DE ESTADO
 -- =========================
-local globalEnv = (typeof(getgenv) == "function" and getgenv()) or _G
 globalEnv._HubStates = globalEnv._HubStates or {}
 globalEnv._HubSelections = globalEnv._HubSelections or {}
 globalEnv._ScriptHubStates = globalEnv._ScriptHubStates or {}
@@ -288,6 +219,7 @@ local miniButton = new("TextButton", {
     Size = UDim2.new(0, 50, 0, 50),
     Position = UDim2.new(0.1, 0, 0.1, 0),
     BackgroundColor3 = THEME.Background,
+    BackgroundTransparency = CurrentOpacity,
     Text = "DF", -- TEXTO DF
     TextColor3 = THEME.Accent,
     Font = Enum.Font.FredokaOne, -- FONTE GORDINHA
@@ -305,6 +237,7 @@ local root = new("Frame", {
     Position = UDim2.new(0.5, 0, 0.5, 0),
     Size = UDim2.new(0, DEFAULT_WIDTH, 0, DEFAULT_HEIGHT),
     BackgroundColor3 = THEME.Background,
+    BackgroundTransparency = CurrentOpacity,
     BorderSizePixel = 0,
     ClipsDescendants = true
 })
@@ -611,33 +544,37 @@ local function createEntry(params, parentFrame, depth, onChildrenChanged)
 
     elseif params.Type == "Toggle" then
         local state = false
+        if params.StateKey then state = globalEnv._HubStates[params.StateKey] or false end
         local knob = new("Frame", {Parent = rightArea, Size = UDim2.new(0, 46, 0, 26), Position = UDim2.new(1, -46, 0.5, -13), BackgroundColor3 = THEME.Off});
         makeRound(knob, 14)
         local subKnob = new("Frame", {Parent = knob, Size = UDim2.new(0, 18, 0, 18), Position = UDim2.new(0, 4, 0, 4), BackgroundColor3 = Color3.new(1, 1, 1)});
         makeRound(subKnob, 999)
-        local function applyState(s)
-            state = s
-            if params.StateKey then globalEnv._HubStates[params.StateKey] = state end
-            if state then
+        local function applyVisual(s)
+            if s then
                 tween(knob, {BackgroundColor3 = THEME.On}, 0.15)
                 tween(subKnob, {Position = UDim2.new(1, -22, 0, 4)}, 0.15)
                 
-                -- [MODIFICADO] Lógica especial para tema PRETO (Fundo fica cinza ao ativar)
                 if CurrentThemeName == "Preto / Black" then
                      tween(bg, {BackgroundColor3 = Color3.fromRGB(60, 60, 60)}, 0.15)
                 end
-                
-                if params.OnEnable then pcall(params.OnEnable) end
             else
                 tween(knob, {BackgroundColor3 = THEME.Off}, 0.15)
                 tween(subKnob, {Position = UDim2.new(0, 4, 0, 4)}, 0.15)
                 
-                -- [MODIFICADO] Retorna ao PanelBg normal ao desativar
                 tween(bg, {BackgroundColor3 = THEME.PanelBg}, 0.15)
-                
+            end
+        end
+        local function applyState(s)
+            state = s
+            if params.StateKey then globalEnv._HubStates[params.StateKey] = state end
+            applyVisual(state)
+            if state then
+                if params.OnEnable then pcall(params.OnEnable) end
+            else
                 if params.OnDisable then pcall(params.OnDisable) end
             end
         end
+        applyVisual(state)
         table.insert(connections, hoverBox.MouseButton1Click:Connect(function() if hubVisible then applyState(not state) end end))
 
     elseif params.Type == "Single" then
@@ -703,6 +640,14 @@ local function createEntry(params, parentFrame, depth, onChildrenChanged)
         updateSelectedLabelPos()
         nameLabel:GetPropertyChangedSignal("TextBounds"):Connect(updateSelectedLabelPos)
 
+        if params.StateKey then
+            local storedVal = globalEnv._HubSelections[params.StateKey]
+            if storedVal then
+                selectedValLabel.Text = ": " .. storedVal
+                updateSelectedLabelPos()
+            end
+        end
+
         table.insert(connections, hoverBox.MouseButton1Click:Connect(function()
             if not hubVisible then return end
             if not expanded then
@@ -716,6 +661,7 @@ local function createEntry(params, parentFrame, depth, onChildrenChanged)
                         Callback = function()
                             selectedValLabel.Text = ": " .. opt
                             updateSelectedLabelPos()
+                            if params.StateKey then globalEnv._HubSelections[params.StateKey] = opt end
                             if params.Callback then params.Callback(opt) end
                             collapse()
                             ham.SetOpen(false)
@@ -730,7 +676,6 @@ local function createEntry(params, parentFrame, depth, onChildrenChanged)
             end
         end))
 
-    -- LÓGICA DO SLIDER NOVO
     elseif params.Type == "Slider" or params.Type == "Intensity" then
         local minV = tonumber(params.Min) or 0
         local maxV = tonumber(params.Max) or 100
@@ -744,11 +689,10 @@ local function createEntry(params, parentFrame, depth, onChildrenChanged)
         makeRound(track, 6)
         local fill = new("Frame", {Parent = track, Size = UDim2.new(0,0,1,0), Position = UDim2.new(0,0,0,0), BackgroundColor3 = THEME.Accent, BorderSizePixel = 0})
         makeRound(fill, 6)
-        -- [MODIFICADO] Bolinha agora usa THEME.KnobColor (Preto no tema Branco)
         local knob = new("Frame", {Parent = rightArea, Size = UDim2.new(0,16,0,16), Position = UDim2.new(0,8,0.5,-8), BackgroundColor3 = (THEME.KnobColor or Color3.fromRGB(245,245,245)), BorderSizePixel = 0})
         makeRound(knob, 999)
         knob.Active = true; knob.ClipsDescendants = true
-        local valLabel = new("TextLabel", {Parent = rightArea, AnchorPoint = Vector2.new(1,0), Position = UDim2.new(1,-10,0,6), Size = UDim2.new(0,46,0,18), BackgroundTransparency = 1, Text = tostring(cur), TextColor3 = THEME.SubText, Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right})
+        local valLabel = new("TextLabel", {Parent = rightArea, AnchorPoint = Vector2.new(1,0.5), Position = UDim2.new(1, -4, 0.5, 0), Size = UDim2.new(0, 52, 0, 18), BackgroundTransparency = 1, Text = tostring(cur), TextColor3 = THEME.SubText, Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right})
         track.Active = true
         fill.Active = true
         local function updateVisuals(instant)
@@ -915,6 +859,7 @@ local function refreshStaticUI()
     leftBg.BackgroundColor3 = THEME.Background 
     rightBg.BackgroundColor3 = THEME.Background
     miniButton.BackgroundColor3 = THEME.Background
+    miniButton.BackgroundTransparency = CurrentOpacity
     
     -- MODIFICAÇÃO: Atualiza cores do Botão DF
     miniButton.TextColor3 = THEME.Accent
@@ -949,8 +894,6 @@ function initTopics()
     titleLabel.Text = T("TITLE_MAIN")
     footer.Text = T("FOOTER_TEXT")
 
-    -- AQUI FICAVA A ABA TESTE (REMOVIDA)
-
     -- =========================
     -- TÓPICO: CONFIGURAÇÃO
     -- =========================
@@ -960,10 +903,12 @@ function initTopics()
             Type = "ListPersistent",
             Name = T("LANG_LABEL"),
             Description = T("LANG_DESC"),
+            StateKey = "LanguageSelection",
             Options = {"Português", "English"},
             Callback = function(val)
                 local oldLang = CurrentLang
                 CurrentLang = (val == "English") and "EN" or "PT"
+                globalEnv.CurrentLang = CurrentLang
                 if oldLang ~= CurrentLang then
                     initTopics()
                 end
@@ -974,10 +919,12 @@ function initTopics()
             Type = "ListPersistent",
             Name = T("THEME_LABEL") .. " [" .. CurrentThemeName .. "]",
             Description = T("THEME_DESC"),
+            StateKey = "ThemeSelection",
             Options = {"Azul / Blue", "Vermelho / Red", "Amarelo / Yellow", "Preto / Black", "Branco / White", "Cinza / Gray"},
             Callback = function(val)
                 if THEME_PRESETS[val] then
                     CurrentThemeName = val
+                    globalEnv.CurrentThemeName = val
                     for k,v in pairs(THEME_PRESETS[val]) do
                         THEME[k] = v
                     end
@@ -988,27 +935,23 @@ function initTopics()
         -- Slider de Opacidade
         {
             Type = "Slider",
+            StateKey = "OpacityValue",
             Name = T("OPACITY_LABEL"),
             Description = T("OPACITY_DESC"),
             Min = 0, Max = 100, Default = (1 - CurrentOpacity) * 100, 
             OnChange = function(val)
                 local transp = 1 - (val / 100)
-                if transp > 0.95 then transp = 0.95 end 
                 CurrentOpacity = transp
+                globalEnv.CurrentOpacity = transp
                 
                 -- Aplica no background principal
                 root.BackgroundTransparency = transp
                 leftBg.BackgroundTransparency = transp
                 rightBg.BackgroundTransparency = transp
+                miniButton.BackgroundTransparency = transp
                 
-                for _, desc in pairs(scroll:GetDescendants()) do
-                    if desc.Name == "ElementBackground" then
-                        desc.BackgroundTransparency = transp
-                    end
-                end
-                
-                for _, desc in pairs(topicsList:GetDescendants()) do
-                    if desc:IsA("TextButton") then
+                for _, desc in pairs(screenGui:GetDescendants()) do
+                    if desc:IsA("Frame") and desc.Name == "ElementBackground" or desc:IsA("TextButton") and desc.Parent == topicsList then
                         desc.BackgroundTransparency = transp
                     end
                 end
